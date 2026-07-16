@@ -43,13 +43,13 @@ case "$ACTION" in
         exit 0
         ;;
     3)
-        echo -e "\n🔍 正在从系统日志中抓取最新的临时域名...\n"
+        echo -e "\n🔍 正在获取最新的临时域名...\n"
         # 抓取最近 50 行日志里最新的 trycloudflare 域名
         TMP_DOMAIN=$(journalctl -u cloudflared -n 50 --no-pager | grep -oE 'https://[a-zA-Z0-9-]+\.trycloudflare\.com' | tail -n 1 || true)
         if [ -n "$TMP_DOMAIN" ]; then
             FINAL_DOMAIN=$(echo "$TMP_DOMAIN" | sed 's|https://||')
             echo "=========================================="
-            echo -e "🔗 当前最新的免费临时域名为:"
+            echo -e "🔗 当前最新的临时域名为:"
             echo -e "   \033[1;32m${FINAL_DOMAIN}\033[0m"
             echo "=========================================="
         else
@@ -79,7 +79,7 @@ if ! command -v cloudflared >/dev/null 2>&1; then
     esac
     wget -q -O "/usr/local/bin/cloudflared" "https://github.com/cloudflare/cloudflared/releases/latest/download/${FILE}"
     chmod +x /usr/local/bin/cloudflared
-    echo "→ ✅ cloudflared 安装完成： /usr/local/bin/cloudflared"
+    echo "→ ✅ cloudflared 安装完成"
 fi
 
 # ===============================================================
