@@ -177,8 +177,8 @@ if [ "$MODE" = "3" ]; then
             [[ "$WS_PATH" != /* ]] && WS_PATH="/$WS_PATH"
             ;;
         2)
-            read -r -p "请输入 gRPC ServiceName（默认 vmess-grpc）： " WS_PATH
-            WS_PATH=${WS_PATH:-vmess-grpc}
+            read -r -p "请输入 gRPC ServiceName（默认 /）： " WS_PATH
+            WS_PATH=${WS_PATH:-/}
             ;;
         4)
             read -r -p "请输入 xhttp 路径（默认 /）： " WS_PATH
@@ -189,17 +189,30 @@ if [ "$MODE" = "3" ]; then
     
     read -r -p "请输入协议类型 (http/https/tcp，默认 http)： " PROTO
     PROTO=${PROTO:-http}
+
+    echo -e "\n请选择边缘协议："
+    echo "1) quic"
+    echo "2) http2"
+    echo "3) auto（不知道就回车）"
+    read -r -p "选择 (1/2/3，默认 3)： " EDGE_CHOICE
+    EDGE_CHOICE=${EDGE_CHOICE:-3}
+    case "$EDGE_CHOICE" in
+        1) EDGE_PROTO="quic" ;;
+        2) EDGE_PROTO="http2" ;;
+        *) EDGE_PROTO="auto" ;;
+    esac
+    echo "→ 边缘协议已设为: ${EDGE_PROTO}"
     
     if [ "$STREAM_TYPE" = "2" ]; then
-        EXEC_CMD="$CLOUD_BIN tunnel --no-autoupdate --protocol http2 --url grpc://127.0.0.1:${PORT}"
+        EXEC_CMD="$CLOUD_BIN tunnel --no-autoupdate --protocol ${EDGE_PROTO} --url grpc://127.0.0.1:${PORT}"
     elif [ "$STREAM_TYPE" = "3" ]; then
-        EXEC_CMD="$CLOUD_BIN tunnel --no-autoupdate --protocol http2 --url tcp://127.0.0.1:${PORT}"
+        EXEC_CMD="$CLOUD_BIN tunnel --no-autoupdate --protocol ${EDGE_PROTO} --url tcp://127.0.0.1:${PORT}"
     else
         CLEAN_PATH=$(echo "$WS_PATH" | sed 's|^/||')
         if [ -n "$CLEAN_PATH" ]; then
-            EXEC_CMD="$CLOUD_BIN tunnel --no-autoupdate --protocol http2 --url ${PROTO}://127.0.0.1:${PORT}/${CLEAN_PATH}"
+            EXEC_CMD="$CLOUD_BIN tunnel --no-autoupdate --protocol ${EDGE_PROTO} --url ${PROTO}://127.0.0.1:${PORT}/${CLEAN_PATH}"
         else
-            EXEC_CMD="$CLOUD_BIN tunnel --no-autoupdate --protocol http2 --url ${PROTO}://127.0.0.1:${PORT}"
+            EXEC_CMD="$CLOUD_BIN tunnel --no-autoupdate --protocol ${EDGE_PROTO} --url ${PROTO}://127.0.0.1:${PORT}"
         fi
     fi
 
@@ -244,8 +257,8 @@ else
                 STREAM_TYPE="ws"
                 ;;
             2)
-                read -r -p "请输入 gRPC ServiceName（默认 vmess-grpc）： " WS_PATH
-                WS_PATH=${WS_PATH:-vmess-grpc}
+                read -r -p "请输入 gRPC ServiceName（默认 /）： " WS_PATH
+                WS_PATH=${WS_PATH:-/}
                 STREAM_TYPE="grpc"
                 ;;
             3)
@@ -264,6 +277,19 @@ else
         PROTO=${PROTO:-http}
         MAPPINGS="${MAPPINGS}${DOMAIN},${PORT},${WS_PATH},${PROTO},${STREAM_TYPE}\n"
     done
+
+    echo -e "\n请选择边缘协议："
+    echo "1) quic"
+    echo "2) http2"
+    echo "3) auto（不知道就回车）"
+    read -r -p "选择 (1/2/3，默认 3)： " EDGE_CHOICE
+    EDGE_CHOICE=${EDGE_CHOICE:-3}
+    case "$EDGE_CHOICE" in
+        1) EDGE_PROTO="quic" ;;
+        2) EDGE_PROTO="http2" ;;
+        *) EDGE_PROTO="auto" ;;
+    esac
+    echo "→ 边缘协议已设为: ${EDGE_PROTO}"
     
     # 凭证处理
     if [ "$MODE" = "1" ]; then
@@ -276,8 +302,7 @@ else
         chmod 600 "$TOKEN_FILE"
         echo "✅ Token 已保存到 $TOKEN_FILE"
         
-        # 新版本优先使用 --token-file
-        EXEC_CMD="$CLOUD_BIN tunnel run --token-file ${TOKEN_FILE}"
+        EXEC_CMD="$CLOUD_BIN tunnel --no-autoupdate --protocol ${EDGE_PROTO} run --token-file ${TOKEN_FILE}"
     else
         echo "请粘贴 credentials JSON 内容（输完按回车两次结束）："
         JSON_CONTENT=""
@@ -289,7 +314,7 @@ else
         printf "%b" "$JSON_CONTENT" > "$CREDENTIAL_FILE"
         chmod 600 "$CREDENTIAL_FILE"
         echo "✅ 凭证文件已保存"
-        EXEC_CMD="$CLOUD_BIN tunnel run --credentials-file ${CREDENTIAL_FILE}"
+        EXEC_CMD="$CLOUD_BIN tunnel --no-autoupdate --protocol ${EDGE_PROTO} run --credentials-file ${CREDENTIAL_FILE}"
     fi
     
     # 生成 config.yml
